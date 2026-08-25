@@ -1,13 +1,18 @@
 from pydantic import BaseModel, EmailStr
+from enum import Enum
 
-from app.models.models import UserRole
+
+class RegistrationRole(str, Enum):
+    USER = "user"
+    VOLUNTEER = "volunteer"
+    NGO = "ngo"
 
 
 class RegisterRequest(BaseModel):
     name: str
     email: EmailStr
     password: str
-    role: UserRole
+    role: RegistrationRole
     phone: str | None = None
 
 
