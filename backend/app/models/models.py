@@ -18,8 +18,8 @@ from app.database import Base
 class UserRole(str, Enum):
     ADMIN = "admin"
     NGO = "ngo"
-    VOLUNTEER = "volunteer"
     USER = "user"
+
 
 
 class NGOStatus(str, Enum):
@@ -108,17 +108,30 @@ class VolunteerProfile(Base):
     __tablename__ = "volunteer_profiles"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), unique=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id"),
+        unique=True
+    )
 
     skills: Mapped[str | None] = mapped_column(Text, nullable=True)
     interests: Mapped[str | None] = mapped_column(Text, nullable=True)
-    availability: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    location: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    availability: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True
+    )
+    location: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True
+    )
 
-    user: Mapped["User"] = relationship(back_populates="volunteer_profile")
+    user: Mapped["User"] = relationship(
+        back_populates="volunteer_profile"
+    )
+
     applications: Mapped[list["Application"]] = relationship(
         back_populates="volunteer"
     )
+
 
 
 class Opportunity(Base):

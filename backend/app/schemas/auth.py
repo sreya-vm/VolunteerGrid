@@ -4,7 +4,6 @@ from enum import Enum
 
 class RegistrationRole(str, Enum):
     USER = "user"
-    VOLUNTEER = "volunteer"
     NGO = "ngo"
 
 
