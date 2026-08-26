@@ -7,10 +7,19 @@ from app.routers.opportunity import router as opportunity_router
 from app.routers.service_request import router as service_request_router
 from app.routers.admin import router as admin_router
 from app.routers.ngo import router as ngo_router
+from fastapi.middleware.cors import CORSMiddleware
+
 
 
 app = FastAPI(
     title="VolunteerGrid API"
+)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
