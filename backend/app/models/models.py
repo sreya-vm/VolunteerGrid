@@ -41,6 +41,14 @@ class ApplicationStatus(str, Enum):
     REJECTED = "rejected"
     WITHDRAWN = "withdrawn"
 
+class OpportunityType(str, Enum):
+    EVENT = "event"
+    POSITION = "position"
+
+class PaymentType(str, Enum):
+    PAID = "paid"
+    UNPAID = "unpaid"
+
 
 class User(Base):
     __tablename__ = "users"
@@ -142,15 +150,59 @@ class Opportunity(Base):
 
     title: Mapped[str] = mapped_column(String(200))
     description: Mapped[str] = mapped_column(Text)
-    location: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    capacity: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow
+    opportunity_type: Mapped[OpportunityType] = mapped_column(
+        SQLEnum(OpportunityType)
     )
 
-    ngo: Mapped["NGO"] = relationship(back_populates="opportunities")
+    payment_type: Mapped[PaymentType] = mapped_column(
+        SQLEnum(PaymentType)
+    )
+
+    location: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True
+    )
+
+    date: Mapped[datetime | None] = mapped_column(
+        DateTime,
+        nullable=True
+    )
+
+    start_time: Mapped[datetime | None] = mapped_column(
+        DateTime,
+        nullable=True
+    )
+
+    end_time: Mapped[datetime | None] = mapped_column(
+        DateTime,
+        nullable=True
+    )
+
+    requirements: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True
+    )
+
+    capacity: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True
+    )
+
+    application_deadline: Mapped[datetime | None] = mapped_column(
+        DateTime,
+        nullable=True
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow
+    )
+
+    ngo: Mapped["NGO"] = relationship(
+        back_populates="opportunities"
+    )
+
     applications: Mapped[list["Application"]] = relationship(
         back_populates="opportunity"
     )

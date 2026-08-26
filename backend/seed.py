@@ -9,6 +9,8 @@ from app.models.models import (
     VolunteerProfile,
     Service,
     Opportunity,
+    OpportunityType,
+    PaymentType,
 )
 from app.services.auth import hash_password
 
@@ -17,7 +19,10 @@ def seed_database():
     db = SessionLocal()
 
     try:
-        # Prevent duplicate seed data
+        # ---------------------------------
+        # PREVENT DUPLICATE SEED DATA
+        # ---------------------------------
+
         existing_user = (
             db.query(User)
             .filter(User.email == "admin@volunteergrid.com")
@@ -28,9 +33,9 @@ def seed_database():
             print("Seed data already exists.")
             return
 
-        # -------------------------
+        # ---------------------------------
         # USERS
-        # -------------------------
+        # ---------------------------------
 
         admin = User(
             name="VolunteerGrid Admin",
@@ -48,8 +53,6 @@ def seed_database():
             phone="9000000002",
         )
 
-        # This is NOT a separate volunteer role.
-        # It is a normal USER who has a volunteer profile.
         volunteer_user = User(
             name="Test Volunteer",
             email="volunteer@volunteergrid.com",
@@ -84,9 +87,9 @@ def seed_database():
 
         db.flush()
 
-        # -------------------------
+        # ---------------------------------
         # VOLUNTEER PROFILE
-        # -------------------------
+        # ---------------------------------
 
         volunteer_profile = VolunteerProfile(
             user_id=volunteer_user.id,
@@ -98,9 +101,9 @@ def seed_database():
 
         db.add(volunteer_profile)
 
-        # -------------------------
+        # ---------------------------------
         # NGOs
-        # -------------------------
+        # ---------------------------------
 
         ngo1 = NGO(
             user_id=ngo_user_1.id,
@@ -132,9 +135,9 @@ def seed_database():
 
         db.flush()
 
-        # -------------------------
+        # ---------------------------------
         # SERVICES
-        # -------------------------
+        # ---------------------------------
 
         services = [
             Service(
@@ -162,9 +165,11 @@ def seed_database():
 
         db.add_all(services)
 
-        # -------------------------
+        # ---------------------------------
         # OPPORTUNITIES
-        # -------------------------
+        # ---------------------------------
+
+        now = datetime.utcnow()
 
         opportunities = [
             Opportunity(
@@ -173,40 +178,99 @@ def seed_database():
                 description=(
                     "Help distribute food packages to families in need."
                 ),
+                opportunity_type=OpportunityType.EVENT,
+                payment_type=PaymentType.UNPAID,
                 location="Chennai",
-                date=datetime.utcnow() + timedelta(days=7),
+                date=now + timedelta(days=7),
+                start_time=now + timedelta(days=7, hours=2),
+                end_time=now + timedelta(days=7, hours=6),
+                requirements=(
+                    "Must be available for the full event. "
+                    "Comfortable clothing recommended."
+                ),
                 capacity=20,
+                application_deadline=now + timedelta(days=5),
             ),
+
             Opportunity(
                 ngo_id=ngo1.id,
-                title="Community Teaching Program",
+                title="Community Teaching Volunteer",
                 description=(
                     "Volunteer to teach basic subjects to children."
                 ),
+                opportunity_type=OpportunityType.POSITION,
+                payment_type=PaymentType.UNPAID,
                 location="Chennai",
-                date=datetime.utcnow() + timedelta(days=14),
+                date=None,
+                start_time=None,
+                end_time=None,
+                requirements=(
+                    "Basic teaching skills and good communication skills."
+                ),
                 capacity=10,
+                application_deadline=now + timedelta(days=12),
             ),
+
             Opportunity(
                 ngo_id=ngo2.id,
                 title="Beach Cleanup Drive",
                 description=(
                     "Join our community beach cleanup initiative."
                 ),
+                opportunity_type=OpportunityType.EVENT,
+                payment_type=PaymentType.UNPAID,
                 location="Chennai",
-                date=datetime.utcnow() + timedelta(days=10),
+                date=now + timedelta(days=10),
+                start_time=now + timedelta(days=10, hours=1),
+                end_time=now + timedelta(days=10, hours=5),
+                requirements=(
+                    "Bring a water bottle and wear comfortable clothes."
+                ),
                 capacity=30,
+                application_deadline=now + timedelta(days=8),
+            ),
+
+            Opportunity(
+                ngo_id=ngo2.id,
+                title="Environmental Program Coordinator",
+                description=(
+                    "Assist with planning and coordinating environmental "
+                    "awareness programs."
+                ),
+                opportunity_type=OpportunityType.POSITION,
+                payment_type=PaymentType.PAID,
+                location="Chennai",
+                date=None,
+                start_time=None,
+                end_time=None,
+                requirements=(
+                    "Event management experience and good communication skills."
+                ),
+                capacity=2,
+                application_deadline=now + timedelta(days=20),
             ),
         ]
 
         db.add_all(opportunities)
 
+        # ---------------------------------
+        # SAVE EVERYTHING
+        # ---------------------------------
+
         db.commit()
 
         print("Seed data created successfully!")
 
-    except Exception:
+        print("\nTest accounts:")
+        print("Admin: admin@volunteergrid.com / Admin@123")
+        print("User: user@volunteergrid.com / User@123")
+        print("Volunteer: volunteer@volunteergrid.com / Volunteer@123")
+        print("Helping Hands NGO: ngo1@volunteergrid.com / Ngo@123")
+        print("Green Earth NGO: ngo2@volunteergrid.com / Ngo@123")
+
+    except Exception as e:
         db.rollback()
+        print(f"Error while seeding database: {e}")
         raise
 
     finally:
