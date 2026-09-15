@@ -1,34 +1,22 @@
+from datetime import datetime
+from typing import Optional
+
 from pydantic import BaseModel
 
 
-class NGOResponse(BaseModel):
-    id: int
-    organization_name: str
-    description: str | None = None
-    address: str | None = None
-    website: str | None = None
-
-    class Config:
-        from_attributes = True
-
-
-class ServiceResponse(BaseModel):
+class UserResponse(BaseModel):
     id: int
     name: str
-    description: str
+    email: str
+    role: str
+    phone: Optional[str] = None
+    is_active: bool
+    created_at: datetime
 
     class Config:
         from_attributes = True
 
 
-class OpportunityResponse(BaseModel):
-    id: int
-    ngo_id: int
-    title: str
-    description: str
-    location: str | None = None
-    date: object | None = None
-    capacity: int | None = None
-
-    class Config:
-        from_attributes = True
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None

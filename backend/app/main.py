@@ -1,39 +1,57 @@
 from fastapi import FastAPI
 
-from app.routers.auth import router as auth_router
-from app.routers.user import router as user_router
-from app.routers.volunteer import router as volunteer_router
-from app.routers.opportunity import router as opportunity_router
-from app.routers.service_request import router as service_request_router
-from app.routers.admin import router as admin_router
-from app.routers.ngo import router as ngo_router
-from fastapi.middleware.cors import CORSMiddleware
-
+from app.routers import (
+    auth,
+    user,
+    admin,
+    ngo,
+    volunteer,
+    opportunity,
+    service_request,
+    notification,
+)
 
 
 app = FastAPI(
-    title="VolunteerGrid API"
-)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    title="VolunteerGrid API",
+    description="Backend API for the VolunteerGrid platform",
+    version="1.0.0",
 )
 
 
-app.include_router(auth_router)
-app.include_router(user_router)
-app.include_router(volunteer_router)
-app.include_router(opportunity_router)
-app.include_router(service_request_router)
-app.include_router(admin_router)
-app.include_router(ngo_router)
+# ============================================================
+# ROUTERS
+# ============================================================
 
+app.include_router(auth.router)
+app.include_router(user.router)
+app.include_router(admin.router)
+app.include_router(ngo.router)
+app.include_router(volunteer.router)
+app.include_router(opportunity.router)
+app.include_router(service_request.router)
+app.include_router(notification.router)
+
+
+# ============================================================
+# ROOT
+# ============================================================
 
 @app.get("/")
 def root():
     return {
-        "message": "VolunteerGrid API is running"
+        "message": "Welcome to VolunteerGrid API",
+        "version": "1.0.0",
+        "docs": "/docs",
+    }
+
+
+# ============================================================
+# HEALTH CHECK
+# ============================================================
+
+@app.get("/health")
+def health_check():
+    return {
+        "status": "healthy"
     }

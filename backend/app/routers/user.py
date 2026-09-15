@@ -1,10 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.dependencies import require_roles
-from app.models.models import NGO, UserRole, User, Service
-from app.schemas.user import NGOResponse
+from app.models.models import (
+    User,
+    UserRole,
+    NGO,
+    NGOStatus,
+    Service,
+)
 
 
 router = APIRouter(
@@ -13,27 +18,53 @@ router = APIRouter(
 )
 
 
-@router.get("/ngos", response_model=list[NGOResponse])
-def get_ngos(
+# ============================================================
+# VIEW ALL APPROVED NGOS
+# USER
+# ============================================================
+
+@router.get("/ngos")
+def get_approved_ngos(
     db: Session = Depends(get_db),
-    current_user=Depends(
+    current_user: User = Depends(
         require_roles(UserRole.USER)
     )
 ):
     ngos = (
         db.query(NGO)
-        .filter(NGO.status == "approved")
+        .filter(
+            NGO.status == NGOStatus.APPROVED
+        )
+        .order_by(
+            NGO.organization_name.asc()
+        )
         .all()
     )
 
-    return ngos
+    return [
+        {
+            "id": ngo.id,
+            "organization_name": ngo.organization_name,
+            "description": ngo.description,
+            "address": ngo.address,
+            "website": ngo.website,
+            "status": ngo.status,
+            "approved_at": ngo.approved_at,
+        }
+        for ngo in ngos
+    ]
 
 
-@router.get("/ngos/{ngo_id}", response_model=NGOResponse)
-def get_ngo(
+# ============================================================
+# VIEW SINGLE APPROVED NGO
+# USER
+# ============================================================
+
+@router.get("/ngos/{ngo_id}")
+def get_ngo_details(
     ngo_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(
+    current_user: User = Depends(
         require_roles(UserRole.USER)
     )
 ):
@@ -41,50 +72,126 @@ def get_ngo(
         db.query(NGO)
         .filter(
             NGO.id == ngo_id,
-            NGO.status == "approved"
+            NGO.status == NGOStatus.APPROVED
         )
         .first()
     )
 
     if not ngo:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="NGO not found"
         )
 
-    return ngo
+    return {
+        "id": ngo.id,
+        "organization_name": ngo.organization_name,
+        "description": ngo.description,
+        "address": ngo.address,
+        "website": ngo.website,
+        "status": ngo.status,
+        "approved_at": ngo.approved_at,
+        "created_at": ngo.created_at,
+    }
+
+
+# ============================================================
+# VIEW NGO SERVICES
+# USER
+# ============================================================
 
 @router.get("/ngos/{ngo_id}/services")
 def get_ngo_services(
     ngo_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(
+    current_user: User = Depends(
         require_roles(UserRole.USER)
     )
 ):
-    # Check whether NGO exists and is approved
     ngo = (
         db.query(NGO)
         .filter(
             NGO.id == ngo_id,
-            NGO.status == "approved"
+            NGO.status == NGOStatus.APPROVED
         )
         .first()
     )
 
     if not ngo:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="NGO not found"
         )
 
-    # Get services offered by this NGO
     services = (
         db.query(Service)
         .filter(
-            Service.ngo_id == ngo_id
+            Service.ngo_id == ngo.id
+        )
+        .order_by(
+            Service.name.asc()
         )
         .all()
     )
 
-    return services
+    return [
+        {
+            "id": service.id,
+            "ngo_id": service.ngo_id,
+            "name": service.name,
+            "description": service.description,
+        }
+        for service in services
+    ]
+
+
+# ============================================================
+# VIEW SINGLE SERVICE
+# USER
+# ============================================================
+
+@router.get("/ngos/{ngo_id}/services/{service_id}")
+def get_ngo_service(
+    ngo_id: int,
+    service_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(UserRole.USER)
+    )
+):
+    ngo = (
+        db.query(NGO)
+        .filter(
+            NGO.id == ngo_id,
+            NGO.status == NGOStatus.APPROVED
+        )
+        .first()
+    )
+
+    if not ngo:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="NGO not found"
+        )
+
+    service = (
+        db.query(Service)
+        .filter(
+            Service.id == service_id,
+            Service.ngo_id == ngo_id
+        )
+        .first()
+    )
+
+    if not service:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Service not found"
+        )
+
+    return {
+        "id": service.id,
+        "ngo_id": service.ngo_id,
+        "name": service.name,
+        "description": service.description,
+    }
