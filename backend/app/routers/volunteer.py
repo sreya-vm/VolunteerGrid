@@ -180,14 +180,19 @@ def get_available_events(
         require_roles(UserRole.USER)
     ),
 ):
-    events = (
+    now = datetime.utcnow()
+
+    opportunities = (
         db.query(Opportunity)
         .filter(
-            Opportunity.opportunity_type == OpportunityType.EVENT,
             Opportunity.status.in_([
                 OpportunityStatus.PUBLISHED,
                 OpportunityStatus.ONGOING,
             ]),
+            (
+                (Opportunity.application_deadline.is_(None))
+                | (Opportunity.application_deadline > now)
+            ),
         )
         .order_by(
             Opportunity.date.asc()
@@ -197,27 +202,28 @@ def get_available_events(
 
     return [
         {
-            "id": event.id,
-            "title": event.title,
-            "description": event.description,
-            "location": event.location,
-            "date": event.date,
-            "start_time": event.start_time,
-            "end_time": event.end_time,
-            "capacity": event.capacity,
-            "requirements": event.requirements,
+            "id": opportunity.id,
+            "title": opportunity.title,
+            "description": opportunity.description,
+            "location": opportunity.location,
+            "date": opportunity.date,
+            "start_time": opportunity.start_time,
+            "end_time": opportunity.end_time,
+            "capacity": opportunity.capacity,
+            "requirements": opportunity.requirements,
             "application_deadline": (
-                event.application_deadline
+                opportunity.application_deadline
             ),
-            "status": event.status,
-            "ngo_id": event.ngo_id,
+            "status": opportunity.status,
+            "ngo_id": opportunity.ngo_id,
             "ngo_name": (
-                event.ngo.organization_name
-                if event.ngo
+                opportunity.ngo.organization_name
+                if opportunity.ngo
                 else None
             ),
+            "opportunity_type": opportunity.opportunity_type,
         }
-        for event in events
+        for opportunity in opportunities
     ]
 
 
@@ -302,25 +308,24 @@ def register_for_event(
         )
 
     event = (
-        db.query(Opportunity)
-        .filter(
-            Opportunity.id == event_id,
-            Opportunity.opportunity_type == OpportunityType.EVENT,
-        )
-        .first()
+    db.query(Opportunity)
+    .filter(
+        Opportunity.id == event_id,
     )
+    .first()
+   )
 
     if not event:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Event not found"
+            detail="Opportunity not found"
         )
 
     if event.status != OpportunityStatus.PUBLISHED:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=(
-                "This event is not currently "
+                "This opportunity is not currently "
                 "open for registration"
             ),
         )
