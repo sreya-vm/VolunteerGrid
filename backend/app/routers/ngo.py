@@ -26,7 +26,11 @@ from app.schemas.service import (
     ServiceResponse,
 )
 
+from datetime import datetime
+import os
 
+from fastapi import APIRouter, Depends, HTTPException, status
+from app.notifications.email import send_email
 router = APIRouter(
     prefix="/ngo",
     tags=["NGO"]
@@ -100,16 +104,45 @@ def create_ngo_details(
     db.commit()
     db.refresh(ngo)
 
+    # --------------------------------------------------------
+    # EMAIL ADMIN ABOUT NGO APPROVAL REQUEST
+    # --------------------------------------------------------
+
+    admin_email = os.getenv("ADMIN_EMAIL")
+
+    email_sent = False
+
+    if admin_email:
+        try:
+            send_email(
+                recipient=admin_email,
+                subject="VolunteerGrid - NGO Approval Request",
+                body=(
+                    "A new NGO has requested approval on VolunteerGrid.\n\n"
+                    f"NGO Name: {ngo.organization_name}\n"
+                    f"NGO Email: {current_user.email}\n"
+                    f"NGO ID: {ngo.id}\n\n"
+                    "Please review the NGO from the VolunteerGrid "
+                    "admin dashboard."
+                ),
+            )
+
+            email_sent = True
+
+        except Exception as exc:
+            print(
+                f"Failed to send NGO approval request email: {exc}"
+            )
+
     return {
         "message": (
             "NGO details submitted successfully "
             "and are pending approval"
         ),
         "ngo_id": ngo.id,
-        "status": ngo.status
+        "status": ngo.status,
+        "email_sent": email_sent,
     }
-
-
 # ============================================================
 # GET MY NGO DETAILS
 # ============================================================
@@ -156,6 +189,8 @@ def update_ngo_details(
         current_user
     )
 
+    was_rejected = ngo.status == NGOStatus.REJECTED
+
     ngo.organization_name = ngo_data.organization_name
     ngo.description = ngo_data.description
     ngo.address = ngo_data.address
@@ -163,17 +198,50 @@ def update_ngo_details(
 
     # If NGO changes its details after rejection,
     # allow it to go through approval again.
-    if ngo.status == NGOStatus.REJECTED:
+    if was_rejected:
         ngo.status = NGOStatus.PENDING
         ngo.approved_at = None
 
     db.commit()
     db.refresh(ngo)
 
+    email_sent = False
+
+    # --------------------------------------------------------
+    # EMAIL ADMIN WHEN REJECTED NGO RESUBMITS
+    # --------------------------------------------------------
+
+    if was_rejected:
+        admin_email = os.getenv("ADMIN_EMAIL")
+
+        if admin_email:
+            try:
+                send_email(
+                    recipient=admin_email,
+                    subject="VolunteerGrid - NGO Resubmitted for Approval",
+                    body=(
+                        "An NGO has updated its previously rejected "
+                        "application and resubmitted it for approval.\n\n"
+                        f"NGO Name: {ngo.organization_name}\n"
+                        f"NGO Email: {current_user.email}\n"
+                        f"NGO ID: {ngo.id}\n\n"
+                        "Please review the updated NGO details "
+                        "from the VolunteerGrid admin dashboard."
+                    ),
+                )
+
+                email_sent = True
+
+            except Exception as exc:
+                print(
+                    f"Failed to send NGO resubmission email: {exc}"
+                )
+
     return {
         "message": "NGO details updated successfully",
         "ngo_id": ngo.id,
         "status": ngo.status,
+        "email_sent": email_sent,
     }
 
 

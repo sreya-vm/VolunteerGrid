@@ -2,8 +2,9 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-
+import os
 from app.database import get_db
+from app.notifications.email import send_email
 from app.dependencies import require_roles
 from app.models.models import (
     AuditLog,
@@ -237,7 +238,7 @@ def approve_ngo(
 
     db.add(audit_log)
 
-    # Notify NGO user
+    # Notify NGO inside VolunteerGrid
     if ngo.user:
         notification = Notification(
             user_id=ngo.user_id,
@@ -253,13 +254,42 @@ def approve_ngo(
     db.commit()
     db.refresh(ngo)
 
+    # --------------------------------------------------------
+    # EMAIL NGO ABOUT APPROVAL
+    # --------------------------------------------------------
+
+    email_sent = False
+
+    if ngo.user and ngo.user.email:
+        try:
+            send_email(
+                recipient=ngo.user.email,
+                subject="VolunteerGrid - NGO Approved",
+                body=(
+                    f"Hello {ngo.organization_name},\n\n"
+                    "Your NGO registration request on VolunteerGrid "
+                    "has been approved by the administrator.\n\n"
+                    "You can now access the approved NGO features "
+                    "of VolunteerGrid.\n\n"
+                    "Regards,\n"
+                    "VolunteerGrid Admin"
+                ),
+            )
+
+            email_sent = True
+
+        except Exception as exc:
+            print(
+                f"Failed to send NGO approval email: {exc}"
+            )
+
     return {
         "message": "NGO approved successfully",
         "ngo_id": ngo.id,
         "status": ngo.status,
         "approved_at": ngo.approved_at,
+        "email_sent": email_sent,
     }
-
 
 # ============================================================
 # REJECT NGO
@@ -303,7 +333,7 @@ def reject_ngo(
 
     db.add(audit_log)
 
-    # Notify NGO user
+    # Notify NGO inside VolunteerGrid
     if ngo.user:
         notification = Notification(
             user_id=ngo.user_id,
@@ -319,13 +349,41 @@ def reject_ngo(
     db.commit()
     db.refresh(ngo)
 
+    # --------------------------------------------------------
+    # EMAIL NGO ABOUT REJECTION
+    # --------------------------------------------------------
+
+    email_sent = False
+
+    if ngo.user and ngo.user.email:
+        try:
+            send_email(
+                recipient=ngo.user.email,
+                subject="VolunteerGrid - NGO Application Rejected",
+                body=(
+                    f"Hello {ngo.organization_name},\n\n"
+                    "Your NGO registration request on VolunteerGrid "
+                    "has been rejected by the administrator.\n\n"
+                    "You may update your NGO details and resubmit "
+                    "your application for approval.\n\n"
+                    "Regards,\n"
+                    "VolunteerGrid Admin"
+                ),
+            )
+
+            email_sent = True
+
+        except Exception as exc:
+            print(
+                f"Failed to send NGO rejection email: {exc}"
+            )
+
     return {
         "message": "NGO rejected successfully",
         "ngo_id": ngo.id,
         "status": ngo.status,
+        "email_sent": email_sent,
     }
-
-
 # ============================================================
 # VIEW ALL USERS
 # ============================================================

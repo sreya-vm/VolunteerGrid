@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -52,6 +52,190 @@ def get_volunteer_profile(
 
 
 # ============================================================
+# HELPER - UPDATE OPPORTUNITY LIFECYCLE
+# ============================================================
+
+def update_opportunity_lifecycle(
+    opportunity: Opportunity
+) -> bool:
+    """
+    Automatically update opportunity status based on
+    its date and start/end times.
+
+    Rules:
+
+    PUBLISHED
+        ↓
+    Event starts
+        ↓
+    ONGOING
+        ↓
+    Event ends
+        ↓
+    COMPLETED
+
+    If the event date has already passed without becoming
+    ongoing, it becomes EXPIRED.
+
+    Application deadline and capacity do NOT change the
+    opportunity status. They only prevent new applications.
+    """
+
+    # Do not automatically modify terminal/manual statuses
+    if opportunity.status in [
+        OpportunityStatus.DRAFT,
+        OpportunityStatus.COMPLETED,
+        OpportunityStatus.CANCELLED,
+        OpportunityStatus.EXPIRED,
+    ]:
+        return False
+
+    if not opportunity.date:
+        return False
+
+    today = date.today()
+    now = datetime.utcnow()
+
+    # --------------------------------------------------------
+    # PUBLISHED opportunity
+    # --------------------------------------------------------
+
+    if opportunity.status == OpportunityStatus.PUBLISHED:
+
+        # Event date has completely passed
+        if opportunity.date < today:
+            opportunity.status = OpportunityStatus.EXPIRED
+            return True
+
+        # Event is today
+        if opportunity.date == today:
+
+            # If an end time exists and it has passed,
+            # the event is completed.
+            if (
+                opportunity.end_time
+                and now.time() >= opportunity.end_time
+            ):
+                opportunity.status = OpportunityStatus.COMPLETED
+                return True
+
+            # If start time exists and has arrived,
+            # event becomes ongoing.
+            if (
+                opportunity.start_time
+                and now.time() >= opportunity.start_time
+            ):
+                opportunity.status = OpportunityStatus.ONGOING
+                return True
+
+    # --------------------------------------------------------
+    # ONGOING opportunity
+    # --------------------------------------------------------
+
+    elif opportunity.status == OpportunityStatus.ONGOING:
+
+        # If the event date is before today,
+        # it has definitely ended.
+        if opportunity.date < today:
+            opportunity.status = OpportunityStatus.COMPLETED
+            return True
+
+        # If the event is today and end time has passed,
+        # mark it completed.
+        if (
+            opportunity.date == today
+            and opportunity.end_time
+            and now.time() >= opportunity.end_time
+        ):
+            opportunity.status = OpportunityStatus.COMPLETED
+            return True
+
+    return False
+
+
+# ============================================================
+# HELPER - CHECK WHETHER APPLICATIONS ARE OPEN
+# ============================================================
+
+def check_application_availability(
+    db: Session,
+    opportunity: Opportunity
+):
+    """
+    Raises an HTTPException if volunteers can no longer apply.
+
+    Applications are closed when:
+
+    1. Opportunity is not PUBLISHED
+    2. Application deadline has passed
+    3. Opportunity date has passed
+    4. Capacity has been reached
+    """
+
+    # Only published opportunities accept applications
+    if opportunity.status != OpportunityStatus.PUBLISHED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Applications are only allowed for "
+                "published opportunities"
+            )
+        )
+
+    now = datetime.utcnow()
+
+    # --------------------------------------------------------
+    # APPLICATION DEADLINE
+    # --------------------------------------------------------
+
+    if (
+        opportunity.application_deadline
+        and now > opportunity.application_deadline
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The application deadline has passed"
+        )
+
+    # --------------------------------------------------------
+    # OPPORTUNITY DATE
+    # --------------------------------------------------------
+
+    if (
+        opportunity.date
+        and opportunity.date < date.today()
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This opportunity has already expired"
+        )
+
+    # --------------------------------------------------------
+    # CAPACITY
+    # --------------------------------------------------------
+
+    if opportunity.capacity is not None:
+
+        active_application_count = (
+            db.query(Application)
+            .filter(
+                Application.opportunity_id == opportunity.id,
+                Application.status.in_([
+                    ApplicationStatus.PENDING,
+                    ApplicationStatus.ACCEPTED,
+                ])
+            )
+            .count()
+        )
+
+        if active_application_count >= opportunity.capacity:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This opportunity is already full"
+            )
+
+
+# ============================================================
 # VIEW AVAILABLE OPPORTUNITIES
 # ============================================================
 
@@ -75,6 +259,31 @@ def get_opportunities(
         )
         .all()
     )
+
+    # Automatically update lifecycle statuses
+    status_changed = False
+
+    for opportunity in opportunities:
+        if update_opportunity_lifecycle(opportunity):
+            status_changed = True
+
+    if status_changed:
+        db.commit()
+
+        # Refresh objects after commit
+        for opportunity in opportunities:
+            db.refresh(opportunity)
+
+    # Remove opportunities that became terminal statuses
+    # during lifecycle update.
+    opportunities = [
+        opportunity
+        for opportunity in opportunities
+        if opportunity.status in [
+            OpportunityStatus.PUBLISHED,
+            OpportunityStatus.ONGOING,
+        ]
+    ]
 
     return opportunities
 
@@ -107,6 +316,21 @@ def get_opportunity(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Opportunity not found or unavailable"
+        )
+
+    # Automatically update lifecycle
+    if update_opportunity_lifecycle(opportunity):
+        db.commit()
+        db.refresh(opportunity)
+
+    # Do not expose expired/completed opportunities
+    if opportunity.status not in [
+        OpportunityStatus.PUBLISHED,
+        OpportunityStatus.ONGOING,
+    ]:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Opportunity is no longer available"
         )
 
     return opportunity
@@ -143,39 +367,27 @@ def apply_for_opportunity(
             detail="Opportunity not found"
         )
 
-    # Only published opportunities can receive applications
-    if opportunity.status != OpportunityStatus.PUBLISHED:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                "Applications are only allowed for "
-                "published opportunities"
-            )
-        )
+    # --------------------------------------------------------
+    # UPDATE LIFECYCLE BEFORE ALLOWING APPLICATION
+    # --------------------------------------------------------
 
-    # Check application deadline
-    now = datetime.utcnow()
+    if update_opportunity_lifecycle(opportunity):
+        db.commit()
+        db.refresh(opportunity)
 
-    if (
-        opportunity.application_deadline
-        and now > opportunity.application_deadline
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="The application deadline has passed"
-        )
+    # --------------------------------------------------------
+    # CHECK APPLICATION AVAILABILITY
+    # --------------------------------------------------------
 
-    # Check whether opportunity date has already passed
-    if (
-        opportunity.date
-        and opportunity.date < now
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="This opportunity has already started or ended"
-        )
+    check_application_availability(
+        db,
+        opportunity
+    )
 
-    # Check previous application
+    # --------------------------------------------------------
+    # CHECK PREVIOUS APPLICATION
+    # --------------------------------------------------------
+
     existing_application = (
         db.query(Application)
         .filter(
@@ -187,7 +399,10 @@ def apply_for_opportunity(
 
     if existing_application:
 
-        # Allow a withdrawn application to be submitted again
+        # ----------------------------------------------------
+        # ALLOW WITHDRAWN APPLICATION TO BE RESUBMITTED
+        # ----------------------------------------------------
+
         if (
             existing_application.status
             == ApplicationStatus.WITHDRAWN
@@ -195,6 +410,7 @@ def apply_for_opportunity(
             existing_application.status = (
                 ApplicationStatus.PENDING
             )
+
             existing_application.applied_at = datetime.utcnow()
 
             notification = Notification(
@@ -209,6 +425,22 @@ def apply_for_opportunity(
             )
 
             db.add(notification)
+
+            # Notify NGO
+            if opportunity.ngo:
+                ngo_notification = Notification(
+                    user_id=opportunity.ngo.user_id,
+                    title="Volunteer Application Resubmitted",
+                    message=(
+                        f"A volunteer has resubmitted "
+                        f"their application for "
+                        f"'{opportunity.title}'."
+                    ),
+                    is_read=False,
+                )
+
+                db.add(ngo_notification)
+
             db.commit()
             db.refresh(existing_application)
 
@@ -228,30 +460,6 @@ def apply_for_opportunity(
         )
 
     # ========================================================
-    # CAPACITY CHECK
-    # ========================================================
-
-    if opportunity.capacity is not None:
-
-        active_application_count = (
-            db.query(Application)
-            .filter(
-                Application.opportunity_id == opportunity.id,
-                Application.status.in_([
-                    ApplicationStatus.PENDING,
-                    ApplicationStatus.ACCEPTED,
-                ])
-            )
-            .count()
-        )
-
-        if active_application_count >= opportunity.capacity:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="This opportunity is already full"
-            )
-
-    # ========================================================
     # CREATE APPLICATION
     # ========================================================
 
@@ -264,7 +472,10 @@ def apply_for_opportunity(
 
     db.add(application)
 
-    # Notify volunteer
+    # --------------------------------------------------------
+    # NOTIFY VOLUNTEER
+    # --------------------------------------------------------
+
     notification = Notification(
         user_id=current_user.id,
         title="Application Submitted",
@@ -278,7 +489,10 @@ def apply_for_opportunity(
 
     db.add(notification)
 
-    # Notify NGO
+    # --------------------------------------------------------
+    # NOTIFY NGO
+    # --------------------------------------------------------
+
     if opportunity.ngo:
         ngo_notification = Notification(
             user_id=opportunity.ngo.user_id,
@@ -357,7 +571,10 @@ def withdraw_application(
 
     opportunity = application.opportunity
 
-    # Notify NGO
+    # --------------------------------------------------------
+    # NOTIFY NGO
+    # --------------------------------------------------------
+
     if opportunity and opportunity.ngo:
         notification = Notification(
             user_id=opportunity.ngo.user_id,

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 
 from app.database import SessionLocal
 from app.models.models import (
@@ -11,6 +11,7 @@ from app.models.models import (
     Opportunity,
     OpportunityType,
     PaymentType,
+    OpportunityStatus,
 )
 from app.services.auth import hash_password
 
@@ -25,7 +26,7 @@ def seed_database():
 
         existing_user = (
             db.query(User)
-            .filter(User.email == "admin@volunteergrid.com")
+            .filter(User.email == "volunteergrid.team@gmail.com")
             .first()
         )
 
@@ -37,44 +38,55 @@ def seed_database():
         # USERS
         # ---------------------------------
 
+        # Admin account
         admin = User(
             name="VolunteerGrid Admin",
-            email="admin@volunteergrid.com",
-            password_hash=hash_password("Admin@123"),
+            email="volunteergrid.team@gmail.com",
+            password_hash=hash_password("admin@12345"),
             role=UserRole.ADMIN,
             phone="9000000001",
+            is_active=True,
         )
 
+        # Normal user
         user = User(
             name="Test User",
             email="user@volunteergrid.com",
             password_hash=hash_password("User@123"),
             role=UserRole.USER,
             phone="9000000002",
+            is_active=True,
         )
 
+        # Volunteer is still a USER.
+        # Having a VolunteerProfile makes this user a volunteer.
         volunteer_user = User(
             name="Test Volunteer",
             email="volunteer@volunteergrid.com",
             password_hash=hash_password("Volunteer@123"),
             role=UserRole.USER,
             phone="9000000003",
+            is_active=True,
         )
 
+        # NGO user 1
         ngo_user_1 = User(
             name="Helping Hands Admin",
             email="ngo1@volunteergrid.com",
             password_hash=hash_password("Ngo@123"),
             role=UserRole.NGO,
             phone="9000000004",
+            is_active=True,
         )
 
+        # NGO user 2
         ngo_user_2 = User(
             name="Green Earth Admin",
             email="ngo2@volunteergrid.com",
             password_hash=hash_password("Ngo@123"),
             role=UserRole.NGO,
             phone="9000000005",
+            is_active=True,
         )
 
         db.add_all([
@@ -131,7 +143,10 @@ def seed_database():
             approved_at=datetime.utcnow(),
         )
 
-        db.add_all([ngo1, ngo2])
+        db.add_all([
+            ngo1,
+            ngo2,
+        ])
 
         db.flush()
 
@@ -172,6 +187,7 @@ def seed_database():
         now = datetime.utcnow()
 
         opportunities = [
+            # EVENT 1
             Opportunity(
                 ngo_id=ngo1.id,
                 title="Weekend Food Distribution",
@@ -181,17 +197,19 @@ def seed_database():
                 opportunity_type=OpportunityType.EVENT,
                 payment_type=PaymentType.UNPAID,
                 location="Chennai",
-                date=now + timedelta(days=7),
-                start_time=now + timedelta(days=7, hours=2),
-                end_time=now + timedelta(days=7, hours=6),
+                date=(now + timedelta(days=7)).date(),
+                start_time=time(10, 0),
+                end_time=time(14, 0),
                 requirements=(
                     "Must be available for the full event. "
                     "Comfortable clothing recommended."
                 ),
                 capacity=20,
                 application_deadline=now + timedelta(days=5),
+                status=OpportunityStatus.PUBLISHED,
             ),
 
+            # POSITION 1
             Opportunity(
                 ngo_id=ngo1.id,
                 title="Community Teaching Volunteer",
@@ -209,8 +227,10 @@ def seed_database():
                 ),
                 capacity=10,
                 application_deadline=now + timedelta(days=12),
+                status=OpportunityStatus.PUBLISHED,
             ),
 
+            # EVENT 2
             Opportunity(
                 ngo_id=ngo2.id,
                 title="Beach Cleanup Drive",
@@ -220,16 +240,18 @@ def seed_database():
                 opportunity_type=OpportunityType.EVENT,
                 payment_type=PaymentType.UNPAID,
                 location="Chennai",
-                date=now + timedelta(days=10),
-                start_time=now + timedelta(days=10, hours=1),
-                end_time=now + timedelta(days=10, hours=5),
+                date=(now + timedelta(days=10)).date(),
+                start_time=time(9, 0),
+                end_time=time(13, 0),
                 requirements=(
                     "Bring a water bottle and wear comfortable clothes."
                 ),
                 capacity=30,
                 application_deadline=now + timedelta(days=8),
+                status=OpportunityStatus.PUBLISHED,
             ),
 
+            # POSITION 2
             Opportunity(
                 ngo_id=ngo2.id,
                 title="Environmental Program Coordinator",
@@ -248,6 +270,7 @@ def seed_database():
                 ),
                 capacity=2,
                 application_deadline=now + timedelta(days=20),
+                status=OpportunityStatus.PUBLISHED,
             ),
         ]
 
@@ -259,14 +282,35 @@ def seed_database():
 
         db.commit()
 
+        print("========================================")
         print("Seed data created successfully!")
+        print("========================================")
 
         print("\nTest accounts:")
-        print("Admin: admin@volunteergrid.com / Admin@123")
-        print("User: user@volunteergrid.com / User@123")
-        print("Volunteer: volunteer@volunteergrid.com / Volunteer@123")
-        print("Helping Hands NGO: ngo1@volunteergrid.com / Ngo@123")
-        print("Green Earth NGO: ngo2@volunteergrid.com / Ngo@123")
+        print("----------------------------------------")
+
+        print("Admin:")
+        print("Email: volunteergrid.team@gmail.com")
+        print("Password: admin@12345")
+
+        print("\nNormal User:")
+        print("Email: user@volunteergrid.com")
+        print("Password: User@123")
+
+        print("\nVolunteer User:")
+        print("Email: volunteer@volunteergrid.com")
+        print("Password: Volunteer@123")
+        print("Role: USER + VolunteerProfile")
+
+        print("\nHelping Hands NGO:")
+        print("Email: ngo1@volunteergrid.com")
+        print("Password: Ngo@123")
+
+        print("\nGreen Earth NGO:")
+        print("Email: ngo2@volunteergrid.com")
+        print("Password: Ngo@123")
+
+        print("----------------------------------------")
 
     except Exception as e:
         db.rollback()

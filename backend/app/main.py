@@ -11,12 +11,32 @@ from app.routers import (
     notification,
 )
 
+from app.scheduler import start_scheduler, stop_scheduler
+
 
 app = FastAPI(
     title="VolunteerGrid API",
     description="Backend API for the VolunteerGrid platform",
     version="1.0.0",
 )
+
+
+# ============================================================
+# START BACKGROUND SCHEDULER
+# ============================================================
+
+@app.on_event("startup")
+def startup_event():
+    start_scheduler()
+
+
+# ============================================================
+# STOP BACKGROUND SCHEDULER
+# ============================================================
+
+@app.on_event("shutdown")
+def shutdown_event():
+    stop_scheduler()
 
 
 # ============================================================
@@ -52,6 +72,4 @@ def root():
 
 @app.get("/health")
 def health_check():
-    return {
-        "status": "healthy"
-    }
+    return {"status": "healthy"}
