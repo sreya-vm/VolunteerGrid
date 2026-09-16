@@ -25,6 +25,7 @@ export default function ApplicationsPage() {
   const [applications, setApplications] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [profileMissing, setProfileMissing] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
@@ -49,6 +50,11 @@ export default function ApplicationsPage() {
           localStorage.removeItem("access_token");
           localStorage.removeItem("token_type");
           router.push("/login");
+          return;
+        }
+
+        if (response.status === 404) {
+          setProfileMissing(true);
           return;
         }
 
@@ -158,8 +164,33 @@ export default function ApplicationsPage() {
           </div>
         )}
 
+        {/* Volunteer profile missing */}
+        {!loading && profileMissing && (
+          <div className="rounded-2xl border border-blue-200 bg-white p-10 text-center shadow-sm">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 text-3xl">
+              👤
+            </div>
+
+            <h2 className="mt-5 text-xl font-semibold text-slate-900">
+              Volunteer profile not set up
+            </h2>
+
+            <p className="mx-auto mt-2 max-w-md text-slate-600">
+              You need a volunteer profile before you can view your
+              applications and activities.
+            </p>
+
+            <Link
+              href="/volunteer"
+              className="mt-6 inline-block rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700"
+            >
+              Go to Volunteer Dashboard
+            </Link>
+          </div>
+        )}
+
         {/* Error */}
-        {!loading && error && (
+        {!loading && !profileMissing && error && (
           <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
             <h2 className="font-semibold text-red-800">
               Unable to load applications
@@ -179,117 +210,123 @@ export default function ApplicationsPage() {
         )}
 
         {/* Empty state */}
-        {!loading && !error && applications.length === 0 && (
-          <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 text-2xl">
-              📋
+        {!loading &&
+          !profileMissing &&
+          !error &&
+          applications.length === 0 && (
+            <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 text-2xl">
+                📋
+              </div>
+
+              <h2 className="mt-5 text-xl font-semibold text-slate-900">
+                No applications yet
+              </h2>
+
+              <p className="mt-2 text-slate-600">
+                You haven't applied for any volunteer opportunities yet.
+              </p>
+
+              <Link
+                href="/volunteer/opportunities"
+                className="mt-6 inline-block rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700"
+              >
+                Find Opportunities
+              </Link>
             </div>
-
-            <h2 className="mt-5 text-xl font-semibold text-slate-900">
-              No applications yet
-            </h2>
-
-            <p className="mt-2 text-slate-600">
-              You haven't applied for any volunteer opportunities yet.
-            </p>
-
-            <Link
-              href="/volunteer/opportunities"
-              className="mt-6 inline-block rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700"
-            >
-              Find Opportunities
-            </Link>
-          </div>
-        )}
+          )}
 
         {/* Applications */}
-        {!loading && !error && applications.length > 0 && (
-          <div className="space-y-5">
-            {applications.map((application) => (
-              <div
-                key={application.application_id}
-                className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
-              >
-                <div className="flex flex-col justify-between gap-4 md:flex-row">
-                  <div>
-                    <h2 className="text-xl font-bold text-slate-900">
-                      {application.opportunity_title}
-                    </h2>
+        {!loading &&
+          !profileMissing &&
+          !error &&
+          applications.length > 0 && (
+            <div className="space-y-5">
+              {applications.map((application) => (
+                <div
+                  key={application.application_id}
+                  className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+                >
+                  <div className="flex flex-col justify-between gap-4 md:flex-row">
+                    <div>
+                      <h2 className="text-xl font-bold text-slate-900">
+                        {application.opportunity_title}
+                      </h2>
 
-                    {application.opportunity_description && (
-                      <p className="mt-2 text-slate-600">
-                        {application.opportunity_description}
-                      </p>
+                      {application.opportunity_description && (
+                        <p className="mt-2 text-slate-600">
+                          {application.opportunity_description}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <span
+                        className={`inline-flex rounded-full px-3 py-1 text-sm font-semibold ${getStatusClass(
+                          application.application_status
+                        )}`}
+                      >
+                        {application.application_status}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 grid gap-4 border-t border-slate-100 pt-5 sm:grid-cols-2 lg:grid-cols-4">
+                    {application.opportunity_type && (
+                      <div>
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                          Type
+                        </p>
+                        <p className="mt-1 font-medium text-slate-800">
+                          {application.opportunity_type}
+                        </p>
+                      </div>
+                    )}
+
+                    {application.location && (
+                      <div>
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                          Location
+                        </p>
+                        <p className="mt-1 font-medium text-slate-800">
+                          {application.location}
+                        </p>
+                      </div>
+                    )}
+
+                    {application.date && (
+                      <div>
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                          Date
+                        </p>
+                        <p className="mt-1 font-medium text-slate-800">
+                          {application.date}
+                        </p>
+                      </div>
+                    )}
+
+                    {(application.start_time ||
+                      application.end_time) && (
+                      <div>
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                          Time
+                        </p>
+
+                        <p className="mt-1 font-medium text-slate-800">
+                          {application.start_time || ""}
+                          {application.start_time &&
+                          application.end_time
+                            ? " - "
+                            : ""}
+                          {application.end_time || ""}
+                        </p>
+                      </div>
                     )}
                   </div>
-
-                  <div>
-                    <span
-                      className={`inline-flex rounded-full px-3 py-1 text-sm font-semibold ${getStatusClass(
-                        application.application_status
-                      )}`}
-                    >
-                      {application.application_status}
-                    </span>
-                  </div>
                 </div>
-
-                <div className="mt-6 grid gap-4 border-t border-slate-100 pt-5 sm:grid-cols-2 lg:grid-cols-4">
-                  {application.opportunity_type && (
-                    <div>
-                      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                        Type
-                      </p>
-                      <p className="mt-1 font-medium text-slate-800">
-                        {application.opportunity_type}
-                      </p>
-                    </div>
-                  )}
-
-                  {application.location && (
-                    <div>
-                      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                        Location
-                      </p>
-                      <p className="mt-1 font-medium text-slate-800">
-                        {application.location}
-                      </p>
-                    </div>
-                  )}
-
-                  {application.date && (
-                    <div>
-                      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                        Date
-                      </p>
-                      <p className="mt-1 font-medium text-slate-800">
-                        {application.date}
-                      </p>
-                    </div>
-                  )}
-
-                  {(application.start_time ||
-                    application.end_time) && (
-                    <div>
-                      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                        Time
-                      </p>
-
-                      <p className="mt-1 font-medium text-slate-800">
-                        {application.start_time || ""}
-                        {application.start_time &&
-                        application.end_time
-                          ? " - "
-                          : ""}
-                        {application.end_time || ""}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
       </div>
     </main>
   );
