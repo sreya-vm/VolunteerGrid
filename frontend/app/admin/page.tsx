@@ -85,20 +85,27 @@ export default function AdminDashboardPage() {
             VolunteerGrid
           </h1>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
 
-            <span className="text-gray-600">
-              Admin Dashboard
-            </span>
+  <span className="text-gray-600">
+    Admin Dashboard
+  </span>
 
-            <button
-              onClick={logout}
-              className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
-            >
-              Logout
-            </button>
+  <button
+    onClick={() => router.push("/admin/profile")}
+    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+  >
+    My Profile
+  </button>
 
-          </div>
+  <button
+    onClick={logout}
+    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+  >
+    Logout
+  </button>
+
+</div>
         </div>
       </header>
 
@@ -241,6 +248,7 @@ export default function AdminDashboardPage() {
             button="View Audit Logs"
             onClick={() => router.push("/admin/audit-logs")}
           />
+          
 
         </div>
 

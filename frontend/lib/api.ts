@@ -864,6 +864,7 @@ export interface AdminNGO {
   status: string;
   approved_at: string | null;
   created_at: string;
+  email: string | null;
 }
 
 export interface AdminUser {
@@ -1128,7 +1129,29 @@ export async function activateAdminUser(
 
   return result;
 }
+export async function getAdminUser(
+  userId: number,
+  token: string
+): Promise<AdminUser> {
+  const response = await fetch(
+    `${API_URL}/admin/users/${userId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
 
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      getErrorMessage(result, "Failed to fetch user")
+    );
+  }
+
+  return result;
+}
 
 export async function deactivateAdminUser(
   userId: number,
@@ -1356,6 +1379,30 @@ export async function getAdminAuditLogs(
   if (!response.ok) {
     throw new Error(
       getErrorMessage(result, "Failed to fetch audit logs")
+    );
+  }
+
+  return result;
+}
+
+export async function getAdminOpportunity(
+  opportunityId: number,
+  token: string
+): Promise<AdminOpportunity> {
+  const response = await fetch(
+    `${API_URL}/admin/opportunities/${opportunityId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      getErrorMessage(result, "Failed to fetch opportunity")
     );
   }
 

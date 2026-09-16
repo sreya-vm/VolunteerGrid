@@ -143,7 +143,21 @@ def get_all_ngos(
         .all()
     )
 
-    return ngos
+    return [
+        {
+            "id": ngo.id,
+            "user_id": ngo.user_id,
+            "organization_name": ngo.organization_name,
+            "description": ngo.description,
+            "address": ngo.address,
+            "website": ngo.website,
+            "status": ngo.status,
+            "approved_at": ngo.approved_at,
+            "created_at": ngo.created_at,
+            "email": ngo.user.email if ngo.user else None,
+        }
+        for ngo in ngos
+    ]
 
 
 # ============================================================
@@ -159,15 +173,26 @@ def get_pending_ngos(
 ):
     ngos = (
         db.query(NGO)
-        .filter(
-            NGO.status == NGOStatus.PENDING
-        )
+        .filter(NGO.status == NGOStatus.PENDING)
         .order_by(NGO.created_at.asc())
         .all()
     )
 
-    return ngos
-
+    return [
+        {
+            "id": ngo.id,
+            "user_id": ngo.user_id,
+            "organization_name": ngo.organization_name,
+            "description": ngo.description,
+            "address": ngo.address,
+            "website": ngo.website,
+            "status": ngo.status,
+            "approved_at": ngo.approved_at,
+            "created_at": ngo.created_at,
+            "email": ngo.user.email if ngo.user else None,
+        }
+        for ngo in ngos
+    ]
 
 # ============================================================
 # VIEW SINGLE NGO
