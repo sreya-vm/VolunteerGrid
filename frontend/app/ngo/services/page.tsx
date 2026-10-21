@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   getNGODetails,
@@ -10,7 +10,7 @@ import {
   NGODetails,
 } from "@/lib/api";
 
-export default function CreateServicePage() {
+function CreateServiceContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -338,5 +338,12 @@ export default function CreateServicePage() {
         </div>
       </main>
     </div>
+  );
+}
+export default function CreateServicePage() {
+  return (
+    <Suspense fallback={<div>Loading services...</div>}>
+      <CreateServiceContent />
+    </Suspense>
   );
 }
