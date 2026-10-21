@@ -6,6 +6,7 @@ export interface RegisterData {
   password: string;
   role: "user" | "ngo";
   phone?: string;
+  
 }
 
 export interface RegisterResponse {
@@ -184,7 +185,7 @@ export interface Service {
 
 export interface ServiceCreateData {
   name: string;
-  description?: string;
+  description?: string; 
 }
 
 
