@@ -99,7 +99,7 @@ export default function CreateServicePage() {
           Number(serviceId),
           {
             name: name.trim(),
-            description: description.trim() || null,
+            description: description.trim() || undefined,
           },
           token
         );
@@ -107,7 +107,7 @@ export default function CreateServicePage() {
         await createNGOService(
           {
             name: name.trim(),
-            description: description.trim() || null,
+            description: description.trim() || undefined,
           },
           token
         );
@@ -227,10 +227,10 @@ export default function CreateServicePage() {
           </div>
 
           <button
-            onClick={() => router.push("/ngo/services")}
+            onClick={() => router.push("/ngo")}
             className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-100"
           >
-            Back to Services
+            Back to Dashboard
           </button>
         </div>
       </header>

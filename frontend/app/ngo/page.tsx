@@ -14,27 +14,48 @@ export default function NGODashboard() {
   const [ngo, setNgo] = useState<NGODetails | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const [profileRequired, setProfileRequired] = useState(false);
+  const [loadError, setLoadError] = useState("");
+
   useEffect(() => {
     loadNGODetails();
   }, []);
 
   async function loadNGODetails() {
-    try {
-      const token = localStorage.getItem("access_token");
+  setLoading(true);
+  setLoadError("");
+  setProfileRequired(false);
 
-      if (!token) {
-        router.push("/login");
-        return;
-      }
+  try {
+    const token = localStorage.getItem("access_token");
 
-      const data = await getNGODetails(token);
-      setNgo(data);
-    } catch (error) {
-      console.error("Failed to load NGO details:", error);
-    } finally {
-      setLoading(false);
+    if (!token) {
+      router.push("/login");
+      return;
     }
+
+    const data = await getNGODetails(token);
+    setNgo(data);
+  } 
+ catch (error) {
+  const message =
+    error instanceof Error ? error.message : "";
+
+  if (message.toLowerCase().includes("ngo profile not found")) {
+    setNgo(null);
+    setProfileRequired(true);
+    setLoadError("");
+  } else {
+    console.error("Failed to load NGO details:", error);
+    setLoadError(
+      "Unable to connect to the server. Please try again."
+    );
   }
+}
+ finally {
+    setLoading(false);
+  }
+}
 
   function logout() {
     localStorage.removeItem("access_token");
@@ -52,6 +73,81 @@ export default function NGODashboard() {
   return (
     <main className="min-h-screen bg-gray-50">
       {/* Header */}
+
+      {/* Popup when NGO profile does not exist */}
+      {profileRequired && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="profile-required-title"
+            className="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl"
+          >
+            <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-blue-100 text-2xl">
+              🏢
+            </div>
+
+            <h2
+              id="profile-required-title"
+              className="text-2xl font-bold text-gray-900"
+            >
+              Complete Your NGO Profile
+            </h2>
+
+            <p className="mt-3 text-gray-600">
+              Welcome to VolunteerGrid! Please submit your NGO
+              details to the admin for verification and approval.
+            </p>
+
+            <p className="mt-3 text-sm text-gray-500">
+              Once submitted, your NGO profile will be reviewed
+              by the admin before you can manage services and
+              opportunities.
+            </p>
+
+            <button
+              type="button"
+              onClick={() => router.push("/ngo/profile")}
+              className="mt-6 w-full rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700"
+            >
+              Complete NGO Profile
+            </button>
+
+            <button
+              type="button"
+              onClick={logout}
+              className="mt-3 w-full rounded-lg border border-gray-300 px-5 py-3 font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Connection error with Retry option */}
+      {loadError && (
+        <div
+          role="alert"
+          className="fixed bottom-6 right-6 z-50 max-w-md rounded-lg border border-red-200 bg-white p-5 shadow-lg"
+        >
+          <p className="font-semibold text-red-700">
+            Unable to connect to the server
+          </p>
+
+          <p className="mt-2 text-sm text-gray-600">
+            Please check your connection and try again.
+          </p>
+
+          <button
+            type="button"
+            onClick={loadNGODetails}
+            className="mt-4 rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       <header className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-blue-600">

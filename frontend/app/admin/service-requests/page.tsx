@@ -248,24 +248,18 @@ export default function AdminServiceRequestsPage() {
                         </option>
 
                         <option value="approved">
-                          Approved
+                          Accepted
                         </option>
 
-                        <option value="in_progress">
-                          In Progress
-                        </option>
+                      
 
-                        <option value="completed">
-                          Completed
-                        </option>
+                  
 
                         <option value="rejected">
                           Rejected
                         </option>
 
-                        <option value="cancelled">
-                          Cancelled
-                        </option>
+                       
                       </select>
                     </td>
                   </tr>
