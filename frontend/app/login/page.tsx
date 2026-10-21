@@ -1,14 +1,13 @@
 
 "use client";
 
-import { FormEvent, Suspense, useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { loginUser } from "@/lib/api";
 
 function LoginContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,10 +16,12 @@ function LoginContent() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (searchParams.get("registered") === "true") {
+    const params = new URLSearchParams(window.location.search);
+
+    if (params.get("registered") === "true") {
       setMessage("Registration successful. Please log in.");
     }
-  }, [searchParams]);
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -148,9 +149,5 @@ function LoginContent() {
 }
 
 export default function LoginPage() {
-  return (
-    <Suspense fallback={<div>Loading login...</div>}>
-      <LoginContent />
-    </Suspense>
-  );
+  return <LoginContent />;
 }
