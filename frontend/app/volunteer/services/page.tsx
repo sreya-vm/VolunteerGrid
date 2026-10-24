@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -56,6 +56,8 @@ export default function ServicesPage() {
   const [servicesLoading, setServicesLoading] = useState(false);
   const [requestsLoading, setRequestsLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const submitLock = useRef(false);
+const [cancellingId, setCancellingId] = useState<number | null>(null);
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -223,6 +225,30 @@ export default function ServicesPage() {
       setError("Please select an NGO and service.");
       return;
     }
+    if (submitLock.current) return;
+
+const duplicate = requests.some(
+  (request) =>
+    request.ngo_id === selectedNgo.id &&
+    request.service_type.trim().toLowerCase() ===
+      selectedService.name.trim().toLowerCase() &&
+    request.status.toLowerCase() === "pending"
+);
+
+if (duplicate) {
+  const message =
+    "You already have a pending request for this service.";
+
+  setError(message);
+
+  window.dispatchEvent(
+    new CustomEvent("vg-toast", {
+      detail: { type: "error", message },
+    })
+  );
+
+  return;
+}
 
     if (!description.trim()) {
       setError("Please describe the service you need.");
@@ -230,6 +256,7 @@ export default function ServicesPage() {
     }
 
     try {
+      submitLock.current = true;
       setSubmitting(true);
       setError("");
       setSuccess("");
@@ -269,6 +296,14 @@ export default function ServicesPage() {
       setSuccess(
         "Your service request has been submitted successfully."
       );
+      window.dispatchEvent(
+  new CustomEvent("vg-toast", {
+    detail: {
+      type: "success",
+      message: "Service request submitted successfully!",
+    },
+  })
+);
 
       setDescription("");
       setLocation("");
@@ -288,6 +323,7 @@ export default function ServicesPage() {
           : "Unable to submit service request."
       );
     } finally {
+       submitLock.current = false;
       setSubmitting(false);
     }
   }

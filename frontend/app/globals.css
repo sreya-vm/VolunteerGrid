@@ -14,3 +14,72 @@ body {
   background: #f8fafc;
   color: #0f172a;
 }
+
+
+/* Consistent button interactions */
+button {
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+button:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 3px;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Shared success/error popup */
+.vg-toast-container {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: min(24rem, calc(100% - 2rem));
+}
+
+.vg-toast {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid;
+  border-radius: 0.75rem;
+  background: white;
+  box-shadow: 0 10px 30px rgb(15 23 42 / 12%);
+}
+
+.vg-toast p {
+  flex: 1;
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.vg-toast-success {
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
+.vg-toast-error {
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+.vg-toast-close {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 1.25rem;
+  cursor: pointer;
+}
