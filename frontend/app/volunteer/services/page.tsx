@@ -455,16 +455,7 @@ export default function ServicesPage() {
             Request a Service
           </button>
 
-          <button
-            onClick={() => {
-              setView("ngos");
-              setError("");
-              setSuccess("");
-            }}
-            className="rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-          >
-            Browse NGOs
-          </button>
+          
         </div>
 
         {/* ================================================= */}

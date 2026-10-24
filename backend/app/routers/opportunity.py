@@ -307,10 +307,15 @@ def get_opportunity(
             Opportunity.status.in_([
                 OpportunityStatus.PUBLISHED,
                 OpportunityStatus.ONGOING,
-            ])
+            ]),
+             Opportunity.application_deadline >= datetime.utcnow()
+        ),Opportunity.application_deadline >= datetime.utcnow()
+        .order_by(
+            Opportunity.date.asc()
         )
-        .first()
-    )
+        .all()
+        )
+      
 
     if not opportunity:
         raise HTTPException(
