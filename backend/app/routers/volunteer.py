@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.dependencies import require_roles
+
 from app.models.models import (
     User,
     UserRole,
@@ -12,10 +13,13 @@ from app.models.models import (
     Opportunity,
     OpportunityType,
     OpportunityStatus,
+    NGO,
+    NGOStatus,
     Application,
     ApplicationStatus,
     Notification,
 )
+
 from app.schemas.volunteer import (
     VolunteerProfileCreate,
     VolunteerProfileUpdate,
@@ -173,6 +177,7 @@ def update_volunteer_profile(
 # VIEW AVAILABLE EVENTS
 # ============================================================
 
+
 @router.get("/events")
 def get_available_events(
     db: Session = Depends(get_db),
@@ -181,22 +186,25 @@ def get_available_events(
     ),
 ):
     now = datetime.utcnow()
+    today = date.today()
 
     opportunities = (
         db.query(Opportunity)
+        .join(NGO, Opportunity.ngo_id == NGO.id)
         .filter(
+            Opportunity.opportunity_type == OpportunityType.EVENT,
+            NGO.status == NGOStatus.APPROVED,
             Opportunity.status.in_([
                 OpportunityStatus.PUBLISHED,
                 OpportunityStatus.ONGOING,
             ]),
             (
-                (Opportunity.application_deadline.is_(None))
+                Opportunity.application_deadline.is_(None)
                 | (Opportunity.application_deadline > now)
             ),
+            Opportunity.date >= today,
         )
-        .order_by(
-            Opportunity.date.asc()
-        )
+        .order_by(Opportunity.date.asc())
         .all()
     )
 
@@ -211,15 +219,12 @@ def get_available_events(
             "end_time": opportunity.end_time,
             "capacity": opportunity.capacity,
             "requirements": opportunity.requirements,
-            "application_deadline": (
-                opportunity.application_deadline
-            ),
+            "application_deadline": opportunity.application_deadline,
             "status": opportunity.status,
             "ngo_id": opportunity.ngo_id,
             "ngo_name": (
                 opportunity.ngo.organization_name
-                if opportunity.ngo
-                else None
+                if opportunity.ngo else None
             ),
             "opportunity_type": opportunity.opportunity_type,
         }
@@ -227,9 +232,11 @@ def get_available_events(
     ]
 
 
+
 # ============================================================
 # VIEW SINGLE EVENT
 # ============================================================
+
 
 @router.get("/events/{event_id}")
 def get_event(
@@ -239,15 +246,25 @@ def get_event(
         require_roles(UserRole.USER)
     ),
 ):
+    now = datetime.utcnow()
+    today = date.today()
+
     event = (
         db.query(Opportunity)
+        .join(NGO, Opportunity.ngo_id == NGO.id)
         .filter(
             Opportunity.id == event_id,
             Opportunity.opportunity_type == OpportunityType.EVENT,
+            NGO.status == NGOStatus.APPROVED,
             Opportunity.status.in_([
                 OpportunityStatus.PUBLISHED,
                 OpportunityStatus.ONGOING,
             ]),
+            (
+                Opportunity.application_deadline.is_(None)
+                | (Opportunity.application_deadline > now)
+            ),
+            Opportunity.date >= today,
         )
         .first()
     )
@@ -268,17 +285,15 @@ def get_event(
         "end_time": event.end_time,
         "capacity": event.capacity,
         "requirements": event.requirements,
-        "application_deadline": (
-            event.application_deadline
-        ),
+        "application_deadline": event.application_deadline,
         "status": event.status,
         "ngo_id": event.ngo_id,
         "ngo_name": (
             event.ngo.organization_name
-            if event.ngo
-            else None
+            if event.ngo else None
         ),
     }
+
 
 
 # ============================================================
@@ -307,13 +322,18 @@ def register_for_event(
             ),
         )
 
+    
     event = (
     db.query(Opportunity)
+    .join(NGO, Opportunity.ngo_id == NGO.id)
     .filter(
         Opportunity.id == event_id,
+        Opportunity.opportunity_type == OpportunityType.EVENT,
+        NGO.status == NGOStatus.APPROVED,
     )
     .first()
-   )
+)
+
 
     if not event:
         raise HTTPException(

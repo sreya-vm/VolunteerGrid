@@ -2,6 +2,7 @@ from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 
 from app.database import get_db
 from app.dependencies import require_roles
@@ -11,6 +12,8 @@ from app.models.models import (
     VolunteerProfile,
     Opportunity,
     OpportunityStatus,
+    NGO,
+      NGOStatus,
     Application,
     ApplicationStatus,
     Notification,
@@ -246,17 +249,22 @@ def get_opportunities(
         require_roles(UserRole.USER)
     )
 ):
+    
     opportunities = (
         db.query(Opportunity)
+        .join(NGO, Opportunity.ngo_id == NGO.id)
         .filter(
+            NGO.status == NGOStatus.APPROVED,
             Opportunity.status.in_([
                 OpportunityStatus.PUBLISHED,
                 OpportunityStatus.ONGOING,
-            ])
+            ]),
+            or_(
+                Opportunity.application_deadline.is_(None),
+                Opportunity.application_deadline >= datetime.utcnow(),
+            ),
         )
-        .order_by(
-            Opportunity.date.asc()
-        )
+        .order_by(Opportunity.date.asc())
         .all()
     )
 
@@ -301,20 +309,18 @@ def get_opportunity(
     )
 ):
     opportunity = (
-        db.query(Opportunity)
-        .filter(
-            Opportunity.id == opportunity_id,
-            Opportunity.status.in_([
-                OpportunityStatus.PUBLISHED,
-                OpportunityStatus.ONGOING,
-            ]),
-             Opportunity.application_deadline >= datetime.utcnow()
-        ),Opportunity.application_deadline >= datetime.utcnow()
-        .order_by(
-            Opportunity.date.asc()
-        )
-        .all()
-        )
+    db.query(Opportunity)
+    .join(NGO, Opportunity.ngo_id == NGO.id)
+    .filter(
+        Opportunity.id == opportunity_id,
+        NGO.status == NGOStatus.APPROVED,
+        Opportunity.status.in_([
+            OpportunityStatus.PUBLISHED,
+            OpportunityStatus.ONGOING,
+        ])
+    )
+    .first()
+)
       
 
     if not opportunity:
@@ -358,13 +364,17 @@ def apply_for_opportunity(
         current_user
     )
 
+    
     opportunity = (
-        db.query(Opportunity)
-        .filter(
-            Opportunity.id == opportunity_id
-        )
-        .first()
+    db.query(Opportunity)
+    .join(NGO, Opportunity.ngo_id == NGO.id)
+    .filter(
+        Opportunity.id == opportunity_id,
+        NGO.status == NGOStatus.APPROVED,
     )
+    .first()
+)
+
 
     if not opportunity:
         raise HTTPException(
