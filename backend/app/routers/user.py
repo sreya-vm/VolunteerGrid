@@ -73,13 +73,15 @@ def get_ngo_details(
     )
 ):
     ngo = (
-        db.query(NGO)
-        .filter(
-            NGO.id == ngo_id,
-            NGO.status == NGOStatus.APPROVED
-        )
-        .first()
+    db.query(NGO)
+    .join(User, NGO.user_id == User.id)
+    .filter(
+        NGO.id == ngo_id,
+        NGO.status == NGOStatus.APPROVED,
+        User.is_active.is_(True),
     )
+    .first()
+)
 
     if not ngo:
         raise HTTPException(
@@ -113,13 +115,15 @@ def get_ngo_services(
     )
 ):
     ngo = (
-        db.query(NGO)
-        .filter(
-            NGO.id == ngo_id,
-            NGO.status == NGOStatus.APPROVED
-        )
-        .first()
+    db.query(NGO)
+    .join(User, NGO.user_id == User.id)
+    .filter(
+        NGO.id == ngo_id,
+        NGO.status == NGOStatus.APPROVED,
+        User.is_active.is_(True),
     )
+    .first()
+)
 
     if not ngo:
         raise HTTPException(
@@ -164,13 +168,15 @@ def get_ngo_service(
     )
 ):
     ngo = (
-        db.query(NGO)
-        .filter(
-            NGO.id == ngo_id,
-            NGO.status == NGOStatus.APPROVED
-        )
-        .first()
+    db.query(NGO)
+    .join(User, NGO.user_id == User.id)
+    .filter(
+        NGO.id == ngo_id,
+        NGO.status == NGOStatus.APPROVED,
+        User.is_active.is_(True),
     )
+    .first()
+)
 
     if not ngo:
         raise HTTPException(

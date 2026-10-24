@@ -251,22 +251,24 @@ def get_opportunities(
 ):
     
     opportunities = (
-        db.query(Opportunity)
-        .join(NGO, Opportunity.ngo_id == NGO.id)
-        .filter(
-            NGO.status == NGOStatus.APPROVED,
-            Opportunity.status.in_([
-                OpportunityStatus.PUBLISHED,
-                OpportunityStatus.ONGOING,
-            ]),
-            or_(
-                Opportunity.application_deadline.is_(None),
-                Opportunity.application_deadline >= datetime.utcnow(),
-            ),
-        )
-        .order_by(Opportunity.date.asc())
-        .all()
+    db.query(Opportunity)
+    .join(NGO, Opportunity.ngo_id == NGO.id)
+    .join(User, NGO.user_id == User.id)
+    .filter(
+        NGO.status == NGOStatus.APPROVED,
+        User.is_active.is_(True),
+        Opportunity.status.in_([
+            OpportunityStatus.PUBLISHED,
+            OpportunityStatus.ONGOING,
+        ]),
+        or_(
+            Opportunity.application_deadline.is_(None),
+            Opportunity.application_deadline >= datetime.utcnow(),
+        ),
     )
+    .order_by(Opportunity.date.asc())
+    .all()
+)
 
     # Automatically update lifecycle statuses
     status_changed = False
@@ -311,13 +313,15 @@ def get_opportunity(
     opportunity = (
     db.query(Opportunity)
     .join(NGO, Opportunity.ngo_id == NGO.id)
+    .join(User, NGO.user_id == User.id)
     .filter(
         Opportunity.id == opportunity_id,
         NGO.status == NGOStatus.APPROVED,
+        User.is_active.is_(True),
         Opportunity.status.in_([
             OpportunityStatus.PUBLISHED,
             OpportunityStatus.ONGOING,
-        ])
+        ]),
     )
     .first()
 )
@@ -368,9 +372,11 @@ def apply_for_opportunity(
     opportunity = (
     db.query(Opportunity)
     .join(NGO, Opportunity.ngo_id == NGO.id)
+    .join(User, NGO.user_id == User.id)
     .filter(
         Opportunity.id == opportunity_id,
         NGO.status == NGOStatus.APPROVED,
+        User.is_active.is_(True),
     )
     .first()
 )

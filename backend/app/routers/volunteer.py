@@ -189,24 +189,26 @@ def get_available_events(
     today = date.today()
 
     opportunities = (
-        db.query(Opportunity)
-        .join(NGO, Opportunity.ngo_id == NGO.id)
-        .filter(
-            Opportunity.opportunity_type == OpportunityType.EVENT,
-            NGO.status == NGOStatus.APPROVED,
-            Opportunity.status.in_([
-                OpportunityStatus.PUBLISHED,
-                OpportunityStatus.ONGOING,
-            ]),
-            (
-                Opportunity.application_deadline.is_(None)
-                | (Opportunity.application_deadline > now)
-            ),
-            Opportunity.date >= today,
-        )
-        .order_by(Opportunity.date.asc())
-        .all()
+    db.query(Opportunity)
+    .join(NGO, Opportunity.ngo_id == NGO.id)
+    .join(User, NGO.user_id == User.id)
+    .filter(
+        Opportunity.opportunity_type == OpportunityType.EVENT,
+        NGO.status == NGOStatus.APPROVED,
+        User.is_active.is_(True),
+        Opportunity.status.in_([
+            OpportunityStatus.PUBLISHED,
+            OpportunityStatus.ONGOING,
+        ]),
+        (
+            Opportunity.application_deadline.is_(None)
+            | (Opportunity.application_deadline > now)
+        ),
+        Opportunity.date >= today,
     )
+    .order_by(Opportunity.date.asc())
+    .all()
+)
 
     return [
         {
@@ -250,24 +252,26 @@ def get_event(
     today = date.today()
 
     event = (
-        db.query(Opportunity)
-        .join(NGO, Opportunity.ngo_id == NGO.id)
-        .filter(
-            Opportunity.id == event_id,
-            Opportunity.opportunity_type == OpportunityType.EVENT,
-            NGO.status == NGOStatus.APPROVED,
-            Opportunity.status.in_([
-                OpportunityStatus.PUBLISHED,
-                OpportunityStatus.ONGOING,
-            ]),
-            (
-                Opportunity.application_deadline.is_(None)
-                | (Opportunity.application_deadline > now)
-            ),
-            Opportunity.date >= today,
-        )
-        .first()
+    db.query(Opportunity)
+    .join(NGO, Opportunity.ngo_id == NGO.id)
+    .join(User, NGO.user_id == User.id)
+    .filter(
+        Opportunity.id == event_id,
+        Opportunity.opportunity_type == OpportunityType.EVENT,
+        NGO.status == NGOStatus.APPROVED,
+        User.is_active.is_(True),
+        Opportunity.status.in_([
+            OpportunityStatus.PUBLISHED,
+            OpportunityStatus.ONGOING,
+        ]),
+        (
+            Opportunity.application_deadline.is_(None)
+            | (Opportunity.application_deadline > now)
+        ),
+        Opportunity.date >= today,
     )
+    .first()
+)
 
     if not event:
         raise HTTPException(
@@ -326,10 +330,12 @@ def register_for_event(
     event = (
     db.query(Opportunity)
     .join(NGO, Opportunity.ngo_id == NGO.id)
+    .join(User, NGO.user_id == User.id)
     .filter(
         Opportunity.id == event_id,
         Opportunity.opportunity_type == OpportunityType.EVENT,
         NGO.status == NGOStatus.APPROVED,
+        User.is_active.is_(True),
     )
     .first()
 )

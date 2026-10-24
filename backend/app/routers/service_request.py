@@ -46,14 +46,18 @@ def create_service_request(
     # Check NGO
     # --------------------------------------------------------
 
+    
     ngo = (
-        db.query(NGO)
-        .filter(
-            NGO.id == request_data.ngo_id,
-            NGO.status == NGOStatus.APPROVED
-        )
-        .first()
+    db.query(NGO)
+    .join(User, NGO.user_id == User.id)
+    .filter(
+        NGO.id == request_data.ngo_id,
+        NGO.status == NGOStatus.APPROVED,
+        User.is_active.is_(True),
     )
+    .first()
+)
+
 
     if not ngo:
         raise HTTPException(
