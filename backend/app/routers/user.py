@@ -30,16 +30,20 @@ def get_approved_ngos(
         require_roles(UserRole.USER)
     )
 ):
+    
     ngos = (
-        db.query(NGO)
-        .filter(
-            NGO.status == NGOStatus.APPROVED
-        )
-        .order_by(
-            NGO.organization_name.asc()
-        )
-        .all()
+    db.query(NGO)
+    .join(User, NGO.user_id == User.id)
+    .filter(
+        NGO.status == NGOStatus.APPROVED,
+        User.is_active == True,
     )
+    .order_by(
+        NGO.organization_name.asc()
+    )
+    .all()
+)
+
 
     return [
         {
