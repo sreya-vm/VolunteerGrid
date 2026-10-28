@@ -2,7 +2,6 @@
 
 A web platform that connects NGOs with volunteers. NGOs register and post volunteering opportunities and services, volunteers build profiles and apply, and administrators approve NGOs and monitor activity.
 
-> **Note:** Items in `[square brackets]` are placeholders. Replace them with your project's actual details.
 
 ## Table of Contents
 - [Features](#features)
