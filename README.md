@@ -268,4 +268,5 @@ Role values are stored in `users.role` ([list your exact values, e.g. `admin`, `
 
 ## Authors
 
-- [Your Name] – [GitHub profile link]
+- [K Neha Riona Alice] – [github.com/nehariona]
+- [Sreya Vinod Menon] [github.com/sreya-vm]
