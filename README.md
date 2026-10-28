@@ -38,8 +38,6 @@ A web platform that connects NGOs with volunteers. NGOs register and post volunt
 
 ## System Architecture
 
-![System Architecture](docs/architecture.svg)
-
 The system has three layers:
 
 1. **Presentation layer:** web interfaces for Admin, NGO and Volunteer users.
